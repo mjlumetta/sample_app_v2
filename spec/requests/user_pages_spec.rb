@@ -71,6 +71,16 @@ describe "UserPages" do
       it { should have_content(m2.content) }
       it { should have_content(user.microposts.count) }
     end
+
+    describe "its posts should be paginated" do
+      before do
+        50.times { FactoryGirl.create(:micropost, user: user) }
+        visit user_path(user)
+      end
+
+      it { should have_selector('div.pagination') }
+    end
+
   end
 
   describe "signup" do

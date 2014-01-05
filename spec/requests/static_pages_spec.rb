@@ -16,6 +16,58 @@ describe "StaticPages" do
     
     it_should_behave_like "all static pages"
     it { should_not have_title('| Home') }
+
+    describe "for signed-in users" do
+      let(:user) { FactoryGirl.create(:user) }
+      before do
+        FactoryGirl.create(:micropost, user: user, content: "Lorem ipsum")
+        FactoryGirl.create(:micropost, user: user, content: "Dolor sit amet")
+        sign_in user
+        visit root_path
+      end
+
+      it "should render the user's feed" do
+        user.feed.each do |item|
+          expect(page).to have_selector("li##{item.id}", text: item.content)
+        end
+      end
+
+      describe "its feed should be paginated" do
+        before do
+          50.times { FactoryGirl.create(:micropost, user: user) }
+          visit root_path
+        end
+
+        it { should have_selector('div.pagination') }
+      end
+
+      describe "sidebar" do
+        it "should have the plural count of microposts" do
+          expect(page).to have_content('2 microposts')
+        end
+
+        it "should have the singular count of microposts" do
+          click_link('delete', match: :first)
+          expect(page).to have_content('1 micropost')
+        end
+ 
+        it "should have the plural of microposts if 0" do
+          click_link('delete', match: :first)
+          click_link('delete', match: :first)
+          expect(page).to have_content('0 microposts')
+        end
+      end
+
+      describe "other users' posts" do
+        let(:other_user) { FactoryGirl.create(:user) }
+        let(:other_post) { FactoryGirl.create(:micropost, user: other_user) }
+        
+        it "should not have delete links" do
+          expect(page).not_to have_link('delete', 
+                                        href: "microposts/#{other_post.id}")
+        end
+      end        
+    end
   end
 
   describe "Help page" do
