@@ -161,10 +161,21 @@ describe User do
       let(:unfollowed_post) do
         FactoryGirl.create(:micropost, user: FactoryGirl.create(:user))
       end
+      let (:followed_user) { FactoryGirl.create(:user) }
+
+      before do
+        @user.follow!(followed_user)
+        3.times { followed_user.microposts.create!(content: "Lorem ipsum") }
+      end
 
       its(:feed) { should include(newer_micropost) }
       its(:feed) { should include(older_micropost) }
       its(:feed) { should_not include(unfollowed_post) }
+      its(:feed) do
+        followed_user.microposts.each do |micropost|
+          should include(micropost)
+        end
+      end
     end
   end
 
@@ -188,6 +199,15 @@ describe User do
 
       it { should_not be_following(other_user) }
       its(:followed_users) { should_not include(other_user) }
+    end
+
+    it "should destroy its relationships when deleted" do
+      relationships = @user.relationships.to_a
+      @user.destroy
+      expect(relationships).not_to be_empty
+      relationships.each do |relationship|
+        expect(Relationship.where(id: relationship.id)).to be_empty
+      end
     end
   end
 end
